@@ -49,19 +49,16 @@ class BitcoinRPC:
             return None
 
         body = resp.read().decode('utf-8')
-        resp_obj = json.loads(body)
-        return resp_obj
+        return json.loads(body)
 
     @staticmethod
     def build_request(idx, method, params):
-        obj = { 'version' : '1.1',
-            'method' : method,
-            'id' : idx }
-        if params is None:
-            obj['params'] = []
-        else:
-            obj['params'] = params
-        return obj
+        return {
+            'version': '1.1',
+            'method': method,
+            'id': idx,
+            'params': [] if params is None else params,
+        }
 
     @staticmethod
     def response_is_error(resp_obj):
@@ -74,9 +71,10 @@ def get_block_hashes(settings, max_blocks_per_call=10000):
     height = settings['min_height']
     while height < settings['max_height']+1:
         num_blocks = min(settings['max_height']+1-height, max_blocks_per_call)
-        batch = []
-        for x in range(num_blocks):
-            batch.append(rpc.build_request(x, 'getblockhash', [height + x]))
+        batch = [
+            rpc.build_request(x, 'getblockhash', [height + x])
+            for x in range(num_blocks)
+        ]
 
         reply = rpc.execute(batch)
         if reply is None:
@@ -107,20 +105,18 @@ if __name__ == '__main__':
         print("Usage: linearize-hashes.py CONFIG-FILE")
         sys.exit(1)
 
-    f = open(sys.argv[1], encoding="utf8")
-    for line in f:
-        # skip comment lines
-        m = re.search('^\s*#', line)
-        if m:
-            continue
+    with open(sys.argv[1], encoding="utf8") as f:
+        for line in f:
+            # skip comment lines
+            m = re.search('^\s*#', line)
+            if m:
+                continue
 
-        # parse key=value lines
-        m = re.search('^(\w+)\s*=\s*(\S.*)$', line)
-        if m is None:
-            continue
-        settings[m.group(1)] = m.group(2)
-    f.close()
-
+            # parse key=value lines
+            m = re.search('^(\w+)\s*=\s*(\S.*)$', line)
+            if m is None:
+                continue
+            settings[m.group(1)] = m.group(2)
     if 'host' not in settings:
         settings['host'] = '127.0.0.1'
     if 'port' not in settings:

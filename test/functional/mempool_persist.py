@@ -59,7 +59,7 @@ class MempoolPersistTest(BitcoinTestFramework):
         self.sync_all()
 
         self.log.debug("Send 5 transactions from node2 (to its own address)")
-        for i in range(5):
+        for _ in range(5):
             self.nodes[2].sendtoaddress(self.nodes[2].getnewaddress(), Decimal("10"))
         node2_balance = self.nodes[2].getbalance()
         self.sync_all()

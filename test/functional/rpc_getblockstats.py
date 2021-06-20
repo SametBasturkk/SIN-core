@@ -107,9 +107,10 @@ class GetblockstatsTest(BitcoinTestFramework):
 
         self.sync_all()
         stats = self.get_stats()
-        expected_stats_noindex = []
-        for stat_row in stats:
-            expected_stats_noindex.append({k: v for k, v in stat_row.items() if k not in self.STATS_NEED_TXINDEX})
+        expected_stats_noindex = [
+            {k: v for k, v in stat_row.items() if k not in self.STATS_NEED_TXINDEX}
+            for stat_row in stats
+        ]
 
         # Make sure all valid statistics are included but nothing else is
         expected_keys = self.expected_stats[0].keys()

@@ -151,7 +151,7 @@ class BIP68_112_113Test(BitcoinTestFramework):
     def generate_blocks(self, number, version, test_blocks=None):
         if test_blocks is None:
             test_blocks = []
-        for i in range(number):
+        for _ in range(number):
             block = self.create_test_block([], version)
             test_blocks.append(block)
             self.last_block_time += 600
@@ -229,23 +229,27 @@ class BIP68_112_113Test(BitcoinTestFramework):
         # Note we reuse inputs for v1 and v2 txs so must test these separately
         # 16 normal inputs
         bip68inputs = []
-        for i in range(16):
+        for _ in range(16):
             bip68inputs.append(send_generic_input_tx(self.nodes[0], self.coinbase_blocks, self.nodeaddress))
 
         # 2 sets of 16 inputs with 10 OP_CSV OP_DROP (actually will be prepended to spending scriptSig)
         bip112basicinputs = []
-        for j in range(2):
+        for _ in range(2):
             inputs = []
-            for i in range(16):
+            for _ in range(16):
                 inputs.append(send_generic_input_tx(self.nodes[0], self.coinbase_blocks, self.nodeaddress))
             bip112basicinputs.append(inputs)
 
         # 2 sets of 16 varied inputs with (relative_lock_time) OP_CSV OP_DROP (actually will be prepended to spending scriptSig)
         bip112diverseinputs = []
-        for j in range(2):
-            inputs = []
-            for i in range(16):
-                inputs.append(send_generic_input_tx(self.nodes[0], self.coinbase_blocks, self.nodeaddress))
+        for _ in range(2):
+            inputs = [
+                send_generic_input_tx(
+                    self.nodes[0], self.coinbase_blocks, self.nodeaddress
+                )
+                for _ in range(16)
+            ]
+
             bip112diverseinputs.append(inputs)
 
         # 1 special input with -1 OP_CSV OP_DROP (actually will be prepended to spending scriptSig)

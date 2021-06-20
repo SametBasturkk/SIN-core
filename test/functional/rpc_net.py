@@ -43,8 +43,8 @@ class NetTest(BitcoinTestFramework):
         peer_info = self.nodes[0].getpeerinfo()
         net_totals_after = self.nodes[0].getnettotals()
         assert_equal(len(peer_info), 2)
-        peers_recv = sum([peer['bytesrecv'] for peer in peer_info])
-        peers_sent = sum([peer['bytessent'] for peer in peer_info])
+        peers_recv = sum(peer['bytesrecv'] for peer in peer_info)
+        peers_sent = sum(peer['bytessent'] for peer in peer_info)
 
         assert_greater_than_or_equal(peers_recv, net_totals_before['totalbytesrecv'])
         assert_greater_than_or_equal(net_totals_after['totalbytesrecv'], peers_recv)

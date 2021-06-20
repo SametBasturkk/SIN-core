@@ -342,7 +342,7 @@ class SendHeadersTest(BitcoinTestFramework):
             for j in range(2):
                 self.log.debug("Part 2.{}.{}: starting...".format(i, j))
                 blocks = []
-                for b in range(i + 1):
+                for _ in range(i + 1):
                     blocks.append(create_block(tip, create_coinbase(height), block_time))
                     blocks[-1].solve()
                     tip = blocks[-1].sha256
@@ -358,7 +358,6 @@ class SendHeadersTest(BitcoinTestFramework):
                     # getdata requests, or duplicate headers announcements
                     [inv_node.send_block_inv(x.sha256) for x in blocks]
                     test_node.wait_for_getdata([x.sha256 for x in blocks])
-                    inv_node.sync_with_ping()
                 else:
                     # Announce via headers
                     test_node.send_header_for_blocks(blocks)
@@ -366,7 +365,7 @@ class SendHeadersTest(BitcoinTestFramework):
                     # Test that duplicate headers won't result in duplicate
                     # getdata requests (the check is further down)
                     inv_node.send_header_for_blocks(blocks)
-                    inv_node.sync_with_ping()
+                inv_node.sync_with_ping()
                 [test_node.send_message(msg_block(x)) for x in blocks]
                 test_node.sync_with_ping()
                 inv_node.sync_with_ping()
@@ -438,10 +437,9 @@ class SendHeadersTest(BitcoinTestFramework):
                     test_node.wait_for_block(tip)
                     if j == 0:
                         test_node.send_get_headers(locator=[tip], hashstop=0)
-                        test_node.sync_with_ping()
                     else:
                         test_node.send_block_inv(tip)
-                        test_node.sync_with_ping()
+                    test_node.sync_with_ping()
             # New blocks should now be announced with header
             tip = self.mine_blocks(1)
             inv_node.check_last_inv_announcement(inv=[tip])
@@ -457,7 +455,7 @@ class SendHeadersTest(BitcoinTestFramework):
 
         # Create 2 blocks.  Send the blocks, then send the headers.
         blocks = []
-        for b in range(2):
+        for _ in range(2):
             blocks.append(create_block(tip, create_coinbase(height), block_time))
             blocks[-1].solve()
             tip = blocks[-1].sha256
@@ -475,7 +473,7 @@ class SendHeadersTest(BitcoinTestFramework):
 
         # This time, direct fetch should work
         blocks = []
-        for b in range(3):
+        for _ in range(3):
             blocks.append(create_block(tip, create_coinbase(height), block_time))
             blocks[-1].solve()
             tip = blocks[-1].sha256
@@ -496,7 +494,7 @@ class SendHeadersTest(BitcoinTestFramework):
         blocks = []
 
         # Create extra blocks for later
-        for b in range(20):
+        for _ in range(20):
             blocks.append(create_block(tip, create_coinbase(height), block_time))
             blocks[-1].solve()
             tip = blocks[-1].sha256
@@ -543,7 +541,7 @@ class SendHeadersTest(BitcoinTestFramework):
             test_node.last_message.pop("getdata", None)
             blocks = []
             # Create two more blocks.
-            for j in range(2):
+            for _ in range(2):
                 blocks.append(create_block(tip, create_coinbase(height), block_time))
                 blocks[-1].solve()
                 tip = blocks[-1].sha256
@@ -564,7 +562,7 @@ class SendHeadersTest(BitcoinTestFramework):
         # Now we test that if we repeatedly don't send connecting headers, we
         # don't go into an infinite loop trying to get them to connect.
         MAX_UNCONNECTING_HEADERS = 10
-        for j in range(MAX_UNCONNECTING_HEADERS + 1):
+        for _ in range(MAX_UNCONNECTING_HEADERS + 1):
             blocks.append(create_block(tip, create_coinbase(height), block_time))
             blocks[-1].solve()
             tip = blocks[-1].sha256

@@ -29,10 +29,7 @@ WIT_V0 = 0
 WIT_V1 = 1
 
 def getutxo(txid):
-    utxo = {}
-    utxo["vout"] = 0
-    utxo["txid"] = txid
-    return utxo
+    return {"vout": 0, "txid": txid}
 
 def find_spendable_utxo(node, min_value):
     for utxo in node.listunspent(query_options={'minimumAmount': min_value}):

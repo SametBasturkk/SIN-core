@@ -186,13 +186,14 @@ class AddressTypeTest(BitcoinTestFramework):
 
         for explicit_type, multisig, from_node in itertools.product([False, True], [False, True], range(4)):
             address_type = None
-            if explicit_type and not multisig:
-                if from_node == 1:
+            if from_node == 1:
+                if explicit_type and not multisig:
                     address_type = 'bech32'
-                elif from_node == 0 or from_node == 3:
+            elif from_node in [0, 3]:
+                if explicit_type and not multisig:
                     address_type = 'p2sh-segwit'
-                else:
-                    address_type = 'legacy'
+            elif explicit_type and not multisig:
+                address_type = 'legacy'
             self.log.info("Sending from node {} ({}) with{} multisig using {}".format(from_node, self.extra_args[from_node], "" if multisig else "out", "default" if address_type is None else address_type))
             old_balances = self.get_balances()
             self.log.debug("Old balances are {}".format(old_balances))
@@ -203,18 +204,17 @@ class AddressTypeTest(BitcoinTestFramework):
             for n, to_node in enumerate(range(from_node, from_node + 4)):
                 to_node %= 4
                 change = False
-                if not multisig:
-                    if from_node == to_node:
-                        # When sending non-multisig to self, use getrawchangeaddress
-                        address = self.nodes[to_node].getrawchangeaddress(address_type=address_type)
-                        change = True
-                    else:
-                        address = self.nodes[to_node].getnewaddress(address_type=address_type)
-                else:
+                if multisig:
                     addr1 = self.nodes[to_node].getnewaddress()
                     addr2 = self.nodes[to_node].getnewaddress()
                     address = self.nodes[to_node].addmultisigaddress(2, [addr1, addr2])['address']
 
+                elif from_node == to_node:
+                    # When sending non-multisig to self, use getrawchangeaddress
+                    address = self.nodes[to_node].getrawchangeaddress(address_type=address_type)
+                    change = True
+                else:
+                    address = self.nodes[to_node].getnewaddress(address_type=address_type)
                 # Do some sanity checking on the created address
                 if address_type is not None:
                     typ = address_type

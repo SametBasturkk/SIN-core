@@ -163,10 +163,7 @@ class ProxyTest(BitcoinTestFramework):
             self.node_test(self.nodes[3], [self.serv3, self.serv3, self.serv3, self.serv3], False, False)
 
         def networks_dict(d):
-            r = {}
-            for x in d['networks']:
-                r[x['name']] = x
-            return r
+            return {x['name']: x for x in d['networks']}
 
         # test RPC getnetworkinfo
         n0 = networks_dict(self.nodes[0].getnetworkinfo())

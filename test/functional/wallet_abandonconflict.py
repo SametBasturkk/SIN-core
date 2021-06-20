@@ -51,13 +51,9 @@ class AbandonConflictTest(BitcoinTestFramework):
         nB = next(i for i, vout in enumerate(self.nodes[0].getrawtransaction(txB, 1)["vout"]) if vout["value"] == Decimal("10"))
         nC = next(i for i, vout in enumerate(self.nodes[0].getrawtransaction(txC, 1)["vout"]) if vout["value"] == Decimal("10"))
 
-        inputs =[]
-        # spend 10btc outputs from txA and txB
-        inputs.append({"txid":txA, "vout":nA})
-        inputs.append({"txid":txB, "vout":nB})
-        outputs = {}
+        inputs = [{"txid": txA, "vout": nA}, {"txid": txB, "vout": nB}]
+        outputs = {self.nodes[0].getnewaddress(): Decimal("14.99998")}
 
-        outputs[self.nodes[0].getnewaddress()] = Decimal("14.99998")
         outputs[self.nodes[1].getnewaddress()] = Decimal("5")
         signed = self.nodes[0].signrawtransactionwithwallet(self.nodes[0].createrawtransaction(inputs, outputs))
         txAB1 = self.nodes[0].sendrawtransaction(signed["hex"])
@@ -105,7 +101,7 @@ class AbandonConflictTest(BitcoinTestFramework):
         unconfbalance = self.nodes[0].getunconfirmedbalance() + self.nodes[0].getbalance()
         assert_equal(unconfbalance, newbalance)
         # Also shouldn't show up in listunspent
-        assert(not txABC2 in [utxo["txid"] for utxo in self.nodes[0].listunspent(0)])
+        assert txABC2 not in [utxo["txid"] for utxo in self.nodes[0].listunspent(0)]
         balance = newbalance
 
         # Abandon original transaction and verify inputs are available again

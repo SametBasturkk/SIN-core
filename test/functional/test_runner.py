@@ -538,7 +538,12 @@ def check_script_list(src_dir):
     Check that there are no scripts in the functional tests directory which are
     not being run by pull-tester.py."""
     script_dir = src_dir + '/test/functional/'
-    python_files = set([test_file for test_file in os.listdir(script_dir) if test_file.endswith(".py")])
+    python_files = {
+        test_file
+        for test_file in os.listdir(script_dir)
+        if test_file.endswith(".py")
+    }
+
     missed_tests = list(python_files - set(map(lambda x: x.split()[0], ALL_SCRIPTS + NON_SCRIPTS)))
     if len(missed_tests) != 0:
         print("%sWARNING!%s The following scripts are not being run: %s. Check the test lists in test_runner.py." % (BOLD[1], BOLD[0], str(missed_tests)))

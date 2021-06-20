@@ -61,7 +61,7 @@ class CNodeNoVersionBan(CLazyNode):
     # NOTE: implementation-specific check here. Remove if bitcoind ban behavior changes
     def on_open(self):
         super().on_open()
-        for i in range(banscore):
+        for _ in range(banscore):
             self.send_message(msg_verack())
 
     def on_reject(self, message): pass

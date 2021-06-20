@@ -15,7 +15,7 @@ def generate_salt():
 
     # Create 16 byte hex salt
     salt_sequence = [cryptogen.randrange(256) for _ in range(16)]
-    return ''.join([format(r, 'x') for r in salt_sequence])
+    return ''.join(format(r, 'x') for r in salt_sequence)
 
 def generate_password():
     """Create 32 byte b64 password"""
@@ -33,10 +33,7 @@ def main():
     username = sys.argv[1]
 
     salt = generate_salt()
-    if len(sys.argv) > 2:
-        password = sys.argv[2]
-    else:
-        password = generate_password()
+    password = sys.argv[2] if len(sys.argv) > 2 else generate_password()
     password_hmac = password_to_hmac(salt, password)
 
     print('String to be appended to bitcoin.conf:')

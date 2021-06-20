@@ -189,10 +189,10 @@ class RESTTest (BitcoinTestFramework):
         self.test_rest_request("/getutxos/checkmempool", http_method='POST', req_type=ReqType.JSON, status=400, ret_type=RetType.OBJ)
 
         # Test limits
-        long_uri = '/'.join(["{}-{}".format(txid, n_) for n_ in range(20)])
+        long_uri = '/'.join("{}-{}".format(txid, n_) for n_ in range(20))
         self.test_rest_request("/getutxos/checkmempool/{}".format(long_uri), http_method='POST', status=400, ret_type=RetType.OBJ)
 
-        long_uri = '/'.join(['{}-{}'.format(txid, n_) for n_ in range(15)])
+        long_uri = '/'.join('{}-{}'.format(txid, n_) for n_ in range(15))
         self.test_rest_request("/getutxos/checkmempool/{}".format(long_uri), http_method='POST', status=200)
 
         self.nodes[0].generate(1)  # generate block to not affect upcoming tests
@@ -258,8 +258,7 @@ class RESTTest (BitcoinTestFramework):
         self.log.info("Test tx inclusion in the /mempool and /block URIs")
 
         # Make 3 tx and mine them on node 1
-        txs = []
-        txs.append(self.nodes[0].sendtoaddress(not_related_address, 11))
+        txs = [self.nodes[0].sendtoaddress(not_related_address, 11)]
         txs.append(self.nodes[0].sendtoaddress(not_related_address, 11))
         txs.append(self.nodes[0].sendtoaddress(not_related_address, 11))
         self.sync_all()

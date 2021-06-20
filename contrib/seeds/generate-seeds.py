@@ -57,7 +57,7 @@ def name_to_ipv6(addr):
         addr = addr.split(':')
         for i,comp in enumerate(addr):
             if comp == '':
-                if i == 0 or i == (len(addr)-1): # skip empty component at beginning or end
+                if i in [0, len(addr) - 1]: # skip empty component at beginning or end
                     continue
                 x += 1 # :: skips to suffix
                 assert(x < 2)
@@ -84,11 +84,7 @@ def parse_spec(s, defaultport):
     else:
         (host,_,port) = s.partition(':')
 
-    if not port:
-        port = defaultport
-    else:
-        port = int(port)
-
+    port = defaultport if not port else int(port)
     host = name_to_ipv6(host)
 
     return (host,port)

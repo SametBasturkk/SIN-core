@@ -189,14 +189,14 @@ class DeploymentInfo(object):
     def usesFramework(self, name):
         nameDot = "%s." % name
         libNameDot = "lib%s." % name
-        for framework in self.deployedFrameworks:
-            if framework.endswith(".framework"):
-                if framework.startswith(nameDot):
-                    return True
-            elif framework.endswith(".dylib"):
-                if framework.startswith(libNameDot):
-                    return True
-        return False
+        return any(
+            framework.endswith(".framework")
+            and framework.startswith(nameDot)
+            or not framework.endswith(".framework")
+            and framework.endswith(".dylib")
+            and framework.startswith(libNameDot)
+            for framework in self.deployedFrameworks
+        )
 
 def getFrameworks(binaryPath, verbose):
     if verbose >= 3:
@@ -204,17 +204,16 @@ def getFrameworks(binaryPath, verbose):
     otoolbin=os.getenv("OTOOL", "otool")
     otool = subprocess.Popen([otoolbin, "-L", binaryPath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     o_stdout, o_stderr = otool.communicate()
-    if otool.returncode != 0:
-        if verbose >= 1:
-            sys.stderr.write(o_stderr)
-            sys.stderr.flush()
-            raise RuntimeError("otool failed with return code %d" % otool.returncode)
+    if otool.returncode != 0 and verbose >= 1:
+        sys.stderr.write(o_stderr)
+        sys.stderr.flush()
+        raise RuntimeError("otool failed with return code %d" % otool.returncode)
 
     otoolLines = o_stdout.split("\n")
     otoolLines.pop(0) # First line is the inspected binary
     if ".framework" in binaryPath or binaryPath.endswith(".dylib"):
         otoolLines.pop(0) # Frameworks and dylibs list themselves as a dependency.
-    
+
     libraries = []
     for line in otoolLines:
         line = line.replace("@loader_path", os.path.dirname(binaryPath))
@@ -224,7 +223,7 @@ def getFrameworks(binaryPath, verbose):
                 print("Found framework:")
                 print(info)
             libraries.append(info)
-    
+
     return libraries
 
 def runInstallNameTool(action, *args):
@@ -363,11 +362,11 @@ def deployFrameworks(frameworks, bundlePath, binaryPath, strip, verbose, deploym
 
 def deployFrameworksForAppBundle(applicationBundle, strip, verbose):
     frameworks = getFrameworks(applicationBundle.binaryPath, verbose)
-    if len(frameworks) == 0 and verbose >= 1:
-        print("Warning: Could not find any external frameworks to deploy in %s." % (applicationBundle.path))
-        return DeploymentInfo()
-    else:
+    if len(frameworks) != 0 or verbose < 1:
         return deployFrameworks(frameworks, applicationBundle.path, applicationBundle.binaryPath, strip, verbose)
+
+    print("Warning: Could not find any external frameworks to deploy in %s." % (applicationBundle.path))
+    return DeploymentInfo()
 
 def deployPlugins(appBundleInfo, deploymentInfo, strip, verbose):
     # Lookup available plugins, exclude unneeded
@@ -379,7 +378,7 @@ def deployPlugins(appBundleInfo, deploymentInfo, strip, verbose):
         if pluginDirectory == "designer":
             # Skip designer plugins
             continue
-        elif pluginDirectory == "phonon" or pluginDirectory == "phonon_backend":
+        elif pluginDirectory in ["phonon", "phonon_backend"]:
             # Deploy the phonon plugins only if phonon is in use
             if not deploymentInfo.usesFramework("phonon"):
                 continue
@@ -391,7 +390,7 @@ def deployPlugins(appBundleInfo, deploymentInfo, strip, verbose):
             # Deploy the script plugins only if QtScript is in use
             if not deploymentInfo.usesFramework("QtScript"):
                 continue
-        elif pluginDirectory == "qmltooling" or pluginDirectory == "qml1tooling":
+        elif pluginDirectory in ["qmltooling", "qml1tooling"]:
             # Deploy the qml plugins only if QtDeclarative is in use
             if not deploymentInfo.usesFramework("QtDeclarative"):
                 continue
@@ -403,11 +402,11 @@ def deployPlugins(appBundleInfo, deploymentInfo, strip, verbose):
             # Deploy the position plugins only if QtPositioning is in use
             if not deploymentInfo.usesFramework("QtPositioning"):
                 continue
-        elif pluginDirectory == "sensors" or pluginDirectory == "sensorgestures":
+        elif pluginDirectory in ["sensors", "sensorgestures"]:
             # Deploy the sensor plugins only if QtSensors is in use
             if not deploymentInfo.usesFramework("QtSensors"):
                 continue
-        elif pluginDirectory == "audio" or pluginDirectory == "playlistformats":
+        elif pluginDirectory in ["audio", "playlistformats"]:
             # Deploy the audio plugins only if QtMultimedia is in use
             if not deploymentInfo.usesFramework("QtMultimedia"):
                 continue
@@ -418,51 +417,72 @@ def deployPlugins(appBundleInfo, deploymentInfo, strip, verbose):
 
         for pluginName in filenames:
             pluginPath = os.path.join(pluginDirectory, pluginName)
-            if pluginName.endswith("_debug.dylib"):
-                # Skip debug plugins
+            if (
+                not pluginName.endswith("_debug.dylib")
+                and pluginPath
+                in [
+                    "imageformats/libqsvg.dylib",
+                    "iconengines/libqsvgicon.dylib",
+                ]
+                and not deploymentInfo.usesFramework("QtSvg")
+                or not pluginName.endswith("_debug.dylib")
+                and pluginPath
+                not in [
+                    "imageformats/libqsvg.dylib",
+                    "iconengines/libqsvgicon.dylib",
+                ]
+                and pluginPath
+                == "accessible/libqtaccessiblecompatwidgets.dylib"
+                and not deploymentInfo.usesFramework("Qt3Support")
+                or not pluginName.endswith("_debug.dylib")
+                and pluginPath
+                not in [
+                    "imageformats/libqsvg.dylib",
+                    "iconengines/libqsvgicon.dylib",
+                ]
+                and pluginPath
+                != "accessible/libqtaccessiblecompatwidgets.dylib"
+                and pluginPath == "graphicssystems/libqglgraphicssystem.dylib"
+                and not deploymentInfo.usesFramework("QtOpenGL")
+                or not pluginName.endswith("_debug.dylib")
+                and pluginPath
+                not in [
+                    "imageformats/libqsvg.dylib",
+                    "iconengines/libqsvgicon.dylib",
+                ]
+                and pluginPath
+                != "accessible/libqtaccessiblecompatwidgets.dylib"
+                and pluginPath != "graphicssystems/libqglgraphicssystem.dylib"
+                and pluginPath == "accessible/libqtaccessiblequick.dylib"
+                and not deploymentInfo.usesFramework("QtQuick")
+                or pluginName.endswith("_debug.dylib")
+            ):
                 continue
-            elif pluginPath == "imageformats/libqsvg.dylib" or pluginPath == "iconengines/libqsvgicon.dylib":
-                # Deploy the svg plugins only if QtSvg is in use
-                if not deploymentInfo.usesFramework("QtSvg"):
-                    continue
-            elif pluginPath == "accessible/libqtaccessiblecompatwidgets.dylib":
-                # Deploy accessibility for Qt3Support only if the Qt3Support is in use
-                if not deploymentInfo.usesFramework("Qt3Support"):
-                    continue
-            elif pluginPath == "graphicssystems/libqglgraphicssystem.dylib":
-                # Deploy the opengl graphicssystem plugin only if QtOpenGL is in use
-                if not deploymentInfo.usesFramework("QtOpenGL"):
-                    continue
-            elif pluginPath == "accessible/libqtaccessiblequick.dylib":
-                # Deploy the accessible qtquick plugin only if QtQuick is in use
-                if not deploymentInfo.usesFramework("QtQuick"):
-                    continue
-
             plugins.append((pluginDirectory, pluginName))
-    
+
     for pluginDirectory, pluginName in plugins:
         if verbose >= 2:
             print("Processing plugin", os.path.join(pluginDirectory, pluginName), "...")
-        
+
         sourcePath = os.path.join(deploymentInfo.pluginPath, pluginDirectory, pluginName)
         destinationDirectory = os.path.join(appBundleInfo.pluginPath, pluginDirectory)
         if not os.path.exists(destinationDirectory):
             os.makedirs(destinationDirectory)
-        
+
         destinationPath = os.path.join(destinationDirectory, pluginName)
         shutil.copy2(sourcePath, destinationPath)
         if verbose >= 3:
             print("Copied:", sourcePath)
             print(" to:", destinationPath)
-        
+
         if strip:
             runStrip(destinationPath, verbose)
-        
+
         dependencies = getFrameworks(destinationPath, verbose)
-        
+
         for dependency in dependencies:
             changeInstallName(dependency.installName, dependency.deployedInstallName, destinationPath, verbose)
-            
+
             # Deploy framework if necessary.
             if dependency.frameworkName not in deploymentInfo.deployedFrameworks:
                 deployFrameworks([dependency], appBundleInfo.path, destinationPath, strip, verbose, deploymentInfo)
@@ -540,7 +560,7 @@ if len(config.fancy) == 1:
         if verbose >= 1:
             sys.stderr.write("Error: Could not import plistlib which is required for fancy disk images.\n")
         sys.exit(1)
-    
+
     p = config.fancy[0]
     if verbose >= 3:
         print("Fancy: Loading \"%s\"..." % p)
@@ -548,14 +568,14 @@ if len(config.fancy) == 1:
         if verbose >= 1:
             sys.stderr.write("Error: Could not find fancy disk image plist at \"%s\"\n" % (p))
         sys.exit(1)
-    
+
     try:
         fancy = plistlib.readPlist(p)
     except:
         if verbose >= 1:
             sys.stderr.write("Error: Could not parse fancy disk image plist at \"%s\"\n" % (p))
         sys.exit(1)
-    
+
     try:
         assert "window_bounds" not in fancy or (isinstance(fancy["window_bounds"], list) and len(fancy["window_bounds"]) == 4)
         assert "background_picture" not in fancy or isinstance(fancy["background_picture"], str)
@@ -569,7 +589,7 @@ if len(config.fancy) == 1:
         if verbose >= 1:
             sys.stderr.write("Error: Bad format of fancy disk image plist at \"%s\"\n" % (p))
         sys.exit(1)
-    
+
     if "background_picture" in fancy:
         bp = fancy["background_picture"]
         if verbose >= 3:
@@ -590,16 +610,12 @@ else:
 if os.path.exists("dist"):
     if verbose >= 2:
         print("+ Removing old dist folder +")
-    
+
     shutil.rmtree("dist")
 
 # ------------------------------------------------
 
-if len(config.volname) == 1:
-    volname = config.volname[0]
-else:
-    volname = app_bundle_name
-
+volname = config.volname[0] if len(config.volname) == 1 else app_bundle_name
 # ------------------------------------------------
 
 target = os.path.join("dist", "Bitcoin-Qt.app")
@@ -623,10 +639,10 @@ try:
     deploymentInfo = deployFrameworksForAppBundle(applicationBundle, config.strip, verbose)
     if deploymentInfo.qtPath is None:
         deploymentInfo.qtPath = os.getenv("QTDIR", None)
-        if deploymentInfo.qtPath is None:
-            if verbose >= 1:
-                sys.stderr.write("Warning: Could not detect Qt's path, skipping plugin deployment!\n")
-            config.plugins = False
+    if deploymentInfo.qtPath is None:
+        if verbose >= 1:
+            sys.stderr.write("Warning: Could not detect Qt's path, skipping plugin deployment!\n")
+        config.plugins = False
 except RuntimeError as e:
     if verbose >= 1:
         sys.stderr.write("Error: %s\n" % str(e))
@@ -637,7 +653,7 @@ except RuntimeError as e:
 if config.plugins:
     if verbose >= 2:
         print("+ Deploying plugins +")
-    
+
     try:
         deployPlugins(applicationBundle, deploymentInfo, config.strip, verbose)
     except RuntimeError as e:
@@ -652,21 +668,19 @@ if len(config.add_qt_tr) == 0:
 else:
     if translations_dir is not None:
         qt_tr_dir = translations_dir
+    elif deploymentInfo.qtPath is not None:
+        qt_tr_dir = os.path.join(deploymentInfo.qtPath, "translations")
     else:
-        if deploymentInfo.qtPath is not None:
-            qt_tr_dir = os.path.join(deploymentInfo.qtPath, "translations")
-        else:
-            sys.stderr.write("Error: Could not find Qt translation path\n")
-            sys.exit(1)
+        sys.stderr.write("Error: Could not find Qt translation path\n")
+        sys.exit(1)
     add_qt_tr = ["qt_%s.qm" % lng for lng in config.add_qt_tr[0].split(",")]
     for lng_file in add_qt_tr:
         p = os.path.join(qt_tr_dir, lng_file)
         if verbose >= 3:
             print("Checking for \"%s\"..." % p)
-        if not os.path.exists(p):
-            if verbose >= 1:
-                sys.stderr.write("Error: Could not find Qt translation file \"%s\"\n" % (lng_file))
-                sys.exit(1)
+        if not os.path.exists(p) and verbose >= 1:
+            sys.stderr.write("Error: Could not find Qt translation file \"%s\"\n" % (lng_file))
+            sys.exit(1)
 
 # ------------------------------------------------
 
@@ -678,7 +692,7 @@ with open(os.path.join(applicationBundle.resourcesPath, "qt.conf"), "wb") as f:
 
 # ------------------------------------------------
 
-if len(add_qt_tr) > 0 and verbose >= 2:
+if add_qt_tr and verbose >= 2:
     print("+ Adding Qt translations +")
 
 for lng_file in add_qt_tr:
@@ -700,14 +714,13 @@ for p in config.add_resources:
     else:
         shutil.copy2(p, t)
 
-# ------------------------------------------------
-
-if config.sign and 'CODESIGNARGS' not in os.environ:
-    print("You must set the CODESIGNARGS environment variable. Skipping signing.")
-elif config.sign:
-    if verbose >= 1:
-        print("Code-signing app bundle %s"%(target,))
-    subprocess.check_call("codesign --force %s %s"%(os.environ['CODESIGNARGS'], target), shell=True)
+if config.sign:
+    if 'CODESIGNARGS' not in os.environ:
+        print("You must set the CODESIGNARGS environment variable. Skipping signing.")
+    else:
+        if verbose >= 1:
+            print("Code-signing app bundle %s"%(target,))
+        subprocess.check_call("codesign --force %s %s"%(os.environ['CODESIGNARGS'], target), shell=True)
 
 # ------------------------------------------------
 
@@ -724,12 +737,12 @@ if config.dmg is not None:
             elif verbose >= 3:
                 hdiutil_args.append("-verbose")
             run = subprocess.check_call
-        
+
         for key, value in kwargs.items():
             hdiutil_args.append("-" + key)
-            if not value is True:
+            if value is not True:
                 hdiutil_args.append(str(value))
-        
+
         return run(hdiutil_args, universal_newlines=True)
     
     if verbose >= 2:
