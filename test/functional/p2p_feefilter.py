@@ -17,7 +17,7 @@ def hashToHex(hash):
 
 # Wait up to 60 secs to see if the testnode has received all the expected invs
 def allInvsMatch(invsExpected, testnode):
-    for x in range(60):
+    for _ in range(60):
         with mininode_lock:
             if (sorted(invsExpected) == sorted(testnode.txinvs)):
                 return True

@@ -116,9 +116,11 @@ class BIP68Test(BitcoinTestFramework):
             import random
             random.shuffle(addresses)
             num_outputs = random.randint(1, max_outputs)
-            outputs = {}
-            for i in range(num_outputs):
-                outputs[addresses[i]] = random.randint(1, 20)*0.01
+            outputs = {
+                addresses[i]: random.randint(1, 20) * 0.01
+                for i in range(num_outputs)
+            }
+
             self.nodes[0].sendmany("", outputs)
             self.nodes[0].generate(1)
 
@@ -129,7 +131,7 @@ class BIP68Test(BitcoinTestFramework):
         # some of those inputs to be sequence locked (and randomly choose
         # between height/time locking). Small random chance of making the locks
         # all pass.
-        for i in range(400):
+        for _ in range(400):
             # Randomly choose up to 10 inputs
             num_inputs = random.randint(1, 10)
             random.shuffle(utxos)

@@ -31,7 +31,7 @@ def unDERify(tx):
     scriptSig = CScript(tx.vin[0].scriptSig)
     newscript = []
     for i in scriptSig:
-        if (len(newscript) == 0):
+        if not newscript:
             newscript.append(i[0:-1] + b'\0' + i[-1:])
         else:
             newscript.append(i)

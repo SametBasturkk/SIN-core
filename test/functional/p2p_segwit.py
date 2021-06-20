@@ -115,9 +115,7 @@ def get_virtual_size(witness_block):
     Virtual size is base + witness/4."""
     base_size = len(witness_block.serialize(with_witness=False))
     total_size = len(witness_block.serialize(with_witness=True))
-    # the "+3" is so we round up
-    vsize = int((3 * base_size + total_size + 3) / 4)
-    return vsize
+    return int((3 * base_size + total_size + 3) / 4)
 
 def test_transaction_acceptance(node, p2p, tx, with_witness, accepted, reason=None):
     """Send a transaction to the node and check that it's accepted to the mempool
@@ -176,12 +174,10 @@ class TestP2PConn(P2PInterface):
             self.last_message.pop("getheaders", None)
         msg = msg_headers()
         msg.headers = [CBlockHeader(block)]
-        if use_header:
-            self.send_message(msg)
-        else:
+        if not use_header:
             self.send_message(msg_inv(inv=[CInv(2, block.sha256)]))
             self.wait_for_getheaders()
-            self.send_message(msg)
+        self.send_message(msg)
         self.wait_for_getdata()
 
     def request_block(self, blockhash, inv_type, timeout=60):
@@ -1398,7 +1394,7 @@ class SegWitTest(BitcoinTestFramework):
             tx = CTransaction()
             tx.vin.append(CTxIn(COutPoint(self.utxo[0].sha256, self.utxo[0].n), b""))
             split_value = (self.utxo[0].nValue - 4000) // NUM_SEGWIT_VERSIONS
-            for i in range(NUM_SEGWIT_VERSIONS):
+            for _ in range(NUM_SEGWIT_VERSIONS):
                 tx.vout.append(CTxOut(split_value, CScript([OP_TRUE])))
             tx.rehash()
             block = self.build_next_block()
@@ -1677,7 +1673,7 @@ class SegWitTest(BitcoinTestFramework):
         tx = CTransaction()
         tx.vin.append(CTxIn(COutPoint(prev_utxo.sha256, prev_utxo.n), b""))
         split_value = prev_utxo.nValue // NUM_SIGHASH_TESTS
-        for i in range(NUM_SIGHASH_TESTS):
+        for _ in range(NUM_SIGHASH_TESTS):
             tx.vout.append(CTxOut(split_value, script_pubkey))
         tx.wit.vtxinwit.append(CTxInWitness())
         sign_p2pk_witness_input(witness_program, tx, 0, SIGHASH_ALL, prev_utxo.nValue, key)

@@ -48,9 +48,12 @@ def is_valid(v):
     for template in templates:
         prefix = bytearray(template[0])
         suffix = bytearray(template[2])
-        if result.startswith(prefix) and result.endswith(suffix):
-            if (len(result) - len(prefix) - len(suffix)) == template[1]:
-                return True
+        if (
+            result.startswith(prefix)
+            and result.endswith(suffix)
+            and (len(result) - len(prefix) - len(suffix)) == template[1]
+        ):
+            return True
     return False
 
 def gen_valid_vectors():
@@ -70,11 +73,7 @@ def gen_valid_vectors():
 
 def gen_invalid_vector(template, corrupt_prefix, randomize_payload_size, corrupt_suffix):
     '''Generate possibly invalid vector'''
-    if corrupt_prefix:
-        prefix = os.urandom(1)
-    else:
-        prefix = bytearray(template[0])
-
+    prefix = os.urandom(1) if corrupt_prefix else bytearray(template[0])
     if randomize_payload_size:
         payload = os.urandom(max(int(random.expovariate(0.5)), 50))
     else:

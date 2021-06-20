@@ -33,9 +33,7 @@ class MempoolCoinbaseTest(BitcoinTestFramework):
         spends1_raw = [create_raw_transaction(self.nodes[0], txid, node0_address, amount=49.99) for txid in coinbase_txids]
         spends1_id = [self.nodes[0].sendrawtransaction(tx) for tx in spends1_raw]
 
-        blocks = []
-        blocks.extend(self.nodes[0].generate(1))
-
+        blocks = list(self.nodes[0].generate(1))
         spends2_raw = [create_raw_transaction(self.nodes[0], txid, node0_address, amount=49.98) for txid in spends1_id]
         spends2_id = [self.nodes[0].sendrawtransaction(tx) for tx in spends2_raw]
 

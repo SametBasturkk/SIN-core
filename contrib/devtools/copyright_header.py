@@ -38,10 +38,10 @@ EXCLUDE = [
     # python init:
     '*__init__.py',
 ]
-EXCLUDE_COMPILED = re.compile('|'.join([fnmatch.translate(m) for m in EXCLUDE]))
+EXCLUDE_COMPILED = re.compile('|'.join(fnmatch.translate(m) for m in EXCLUDE))
 
 INCLUDE = ['*.h', '*.cpp', '*.cc', '*.c', '*.py']
-INCLUDE_COMPILED = re.compile('|'.join([fnmatch.translate(m) for m in INCLUDE]))
+INCLUDE_COMPILED = re.compile('|'.join(fnmatch.translate(m) for m in INCLUDE))
 
 def applies_to_file(filename):
     return ((EXCLUDE_COMPILED.match(filename) is None) and
@@ -149,8 +149,7 @@ def read_file(filename):
     return open(os.path.abspath(filename), 'r', encoding="utf8").read()
 
 def gather_file_info(filename):
-    info = {}
-    info['filename'] = filename
+    info = {'filename': filename}
     c = read_file(filename)
     info['contents'] = c
 
@@ -171,14 +170,14 @@ def gather_file_info(filename):
         info['year_list_style'][holder_name] = has_year_list_style
         info['without_c_style'][holder_name] = has_without_c_style
         if has_dominant_style or has_year_list_style or has_without_c_style:
-            info['classified_copyrights'] = info['classified_copyrights'] + 1
+            info['classified_copyrights'] += 1
     return info
 
 ################################################################################
 # report execution
 ################################################################################
 
-SEPARATOR = '-'.join(['' for _ in range(80)])
+SEPARATOR = '-'.join('' for _ in range(80))
 
 def print_filenames(filenames, verbose):
     if not verbose:
@@ -222,7 +221,7 @@ def print_report(file_infos, verbose):
     for holder_name in EXPECTED_HOLDER_NAMES:
         dominant_style = [i['filename'] for i in file_infos if
                           i['dominant_style'][holder_name]]
-        if len(dominant_style) > 0:
+        if dominant_style:
             print("%4d with '%s'" % (len(dominant_style),
                                      holder_name.replace('\n', '\\n')))
             print_filenames(dominant_style, verbose)
@@ -233,7 +232,7 @@ def print_report(file_infos, verbose):
     for holder_name in EXPECTED_HOLDER_NAMES:
         year_list_style = [i['filename'] for i in file_infos if
                            i['year_list_style'][holder_name]]
-        if len(year_list_style) > 0:
+        if year_list_style:
             print("%4d with '%s'" % (len(year_list_style),
                                      holder_name.replace('\n', '\\n')))
             print_filenames(year_list_style, verbose)
@@ -244,7 +243,7 @@ def print_report(file_infos, verbose):
     for holder_name in EXPECTED_HOLDER_NAMES:
         without_c_style = [i['filename'] for i in file_infos if
                            i['without_c_style'][holder_name]]
-        if len(without_c_style) > 0:
+        if without_c_style:
             print("%4d with '%s'" % (len(without_c_style),
                                      holder_name.replace('\n', '\\n')))
             print_filenames(without_c_style, verbose)
@@ -325,15 +324,13 @@ def get_most_recent_git_change_year(filename):
 ################################################################################
 
 def read_file_lines(filename):
-    f = open(os.path.abspath(filename), 'r', encoding="utf8")
-    file_lines = f.readlines()
-    f.close()
+    with open(os.path.abspath(filename), 'r', encoding="utf8") as f:
+        file_lines = f.readlines()
     return file_lines
 
 def write_file_lines(filename, file_lines):
-    f = open(os.path.abspath(filename), 'w', encoding="utf8")
-    f.write(''.join(file_lines))
-    f.close()
+    with open(os.path.abspath(filename), 'w', encoding="utf8") as f:
+        f.write(''.join(file_lines))
 
 ################################################################################
 # update header years execution
@@ -346,11 +343,9 @@ HOLDER = 'The Bitcoin Core developers'
 UPDATEABLE_LINE_COMPILED = re.compile(' '.join([COPYRIGHT, YEAR_RANGE, HOLDER]))
 
 def get_updatable_copyright_line(file_lines):
-    index = 0
-    for line in file_lines:
+    for index, line in enumerate(file_lines):
         if UPDATEABLE_LINE_COMPILED.search(line) is not None:
             return index, line
-        index = index + 1
     return None, None
 
 def parse_year_range(year_range):
@@ -505,10 +500,7 @@ def file_has_hashbang(file_lines):
     return file_lines[0][:2] == '#!'
 
 def insert_python_header(filename, file_lines, start_year, end_year):
-    if file_has_hashbang(file_lines):
-        insert_idx = 1
-    else:
-        insert_idx = 0
+    insert_idx = 1 if file_has_hashbang(file_lines) else 0
     header_lines = get_python_header_lines_to_insert(start_year, end_year)
     for line in header_lines:
         file_lines.insert(insert_idx, line)
@@ -571,10 +563,7 @@ def insert_cmd(argv):
     if extension not in ['.h', '.cpp', '.cc', '.c', '.py']:
         sys.exit("*** cannot insert for file extension %s" % extension)
 
-    if extension == '.py':
-        style = 'python'
-    else:
-        style = 'cpp'
+    style = 'python' if extension == '.py' else 'cpp'
     exec_insert_header(filename, style)
 
 ################################################################################

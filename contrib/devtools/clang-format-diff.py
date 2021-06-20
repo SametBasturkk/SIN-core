@@ -109,15 +109,14 @@ def main():
     match = re.search('^\+\+\+\ (.*?/){%s}(\S*)' % args.p, line)
     if match:
       filename = match.group(2)
-    if filename == None:
+    if filename is None:
       continue
 
     if args.regex is not None:
       if not re.match('^%s$' % args.regex, filename):
         continue
-    else:
-      if not re.match('^%s$' % args.iregex, filename, re.IGNORECASE):
-        continue
+    elif not re.match('^%s$' % args.iregex, filename, re.IGNORECASE):
+      continue
 
     match = re.search('^@@.*\+(\d+)(,(\d+))?', line)
     if match:
